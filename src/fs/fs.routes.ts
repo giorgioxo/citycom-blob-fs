@@ -34,4 +34,19 @@ fsRouter.post("/directories", requireAuth, async (req, res) => {
   }
 });
 
+fsRouter.get("/nodes", requireAuth, async (req, res) => {
+  const path = String(req.query.path ?? "");
+
+  if (!path) {
+    return res.status(400).json({ message: "path required" });
+  }
+  try {
+    const nodes = await fsService.listNodesRecursive(req.userId, path);
+    return res.status(200).json({ nodes });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "unknown error";
+    return res.status(500).json({ message: "internal error", detail: message });
+  }
+});
+
 export { fsRouter };

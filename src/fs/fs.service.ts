@@ -1,7 +1,24 @@
 import type { MetadataStore } from "../metadata/metadata.store";
+import type { FsNode } from "../metadata/metadata.store";
 
 export class FsService {
   constructor(private readonly metadata: MetadataStore) {}
+
+  private normalizePath(path: string): string {
+    let p = path.trim();
+
+    if (!p.startsWith("/")) p = "/" + p;
+    p = p.replace(/\/+$/, "");
+
+    return p === "" ? "/" : p;
+  }
+
+  private parentOf(path: string): string | null {
+    if (path === "/") return null;
+    const idx = path.lastIndexOf("/");
+    if (idx === 0) return "/";
+    return path.slice(0, idx);
+  }
 
   async createDirectory(ownerId: string, path: string): Promise<void> {
     const normalizedPath = this.normalizePath(path);
@@ -35,19 +52,21 @@ export class FsService {
     });
   }
 
-  private normalizePath(path: string): string {
-    let p = path.trim();
+  async listNodesRecursive(ownerId: string, path: string): Promise<FsNode[]> {
+    const base = this.normalizePath(path);
 
-    if (!p.startsWith("/")) p = "/" + p;
-    p = p.replace(/\/+$/, "");
+    const baseNode = await this.metadata.getNode(ownerId, base);
+    if (!baseNode) {
+      throw new Error("path not found");
+    }
+    if (baseNode.kind !== "dir") {
+      throw new Error("path is not a directory");
+    }
 
-    return p === "" ? "/" : p;
-  }
+    const prefix = base === "/" ? "/" : base + "/";
 
-  private parentOf(path: string): string | null {
-    if (path === "/") return null;
-    const idx = path.lastIndexOf("/");
-    if (idx === 0) return "/";
-    return path.slice(0, idx);
+    const nodes = await this.metadata.listByPrefix(ownerId, prefix);
+
+    return nodes.filter((n) => n.path !== base);
   }
 }
