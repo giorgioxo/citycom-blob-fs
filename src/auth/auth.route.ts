@@ -1,7 +1,7 @@
 import { Router } from "express";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-import { createUser, findUserByUsername } from "./users.store.js";
+import { createUser, findUserByUsername } from "./users.store";
 
 const authRouter = Router();
 

@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import { findUserById } from "./users.store.js";
+import { findUserById } from "./users.store";
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const userId = req.header("x-user-id");

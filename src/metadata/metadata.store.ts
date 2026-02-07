@@ -11,6 +11,7 @@ export type FsNode = {
 export interface MetadataStore {
   createNode(node: FsNode): Promise<void>;
   exists(ownerId: string, path: string): Promise<boolean>;
+  getNode(ownerId: string, path: string): Promise<FsNode | undefined>;
 }
 
 export class InMemoryMetadataStore implements MetadataStore {
@@ -21,7 +22,26 @@ export class InMemoryMetadataStore implements MetadataStore {
   }
 
   async exists(ownerId: string, path: string): Promise<boolean> {
+    if (path === "/" && !this.nodes.has(this.key(ownerId, "/"))) {
+      const now = new Date();
+      this.nodes.set(this.key(ownerId, "/"), {
+        ownerId,
+        path: "/",
+        kind: "dir",
+        createDate: now,
+        updateDate: now,
+      });
+    }
     return this.nodes.has(this.key(ownerId, path));
+  }
+
+  async getNode(ownerId: string, path: string): Promise<FsNode | undefined> {
+    const key = this.key(ownerId, path);
+    if (path === "/" && !this.nodes.has(key)) {
+      const now = new Date();
+      this.nodes.set(key, { ownerId, path: "/", kind: "dir", createDate: now, updateDate: now });
+    }
+    return this.nodes.get(key);
   }
 
   private key(ownerId: string, path: string): string {

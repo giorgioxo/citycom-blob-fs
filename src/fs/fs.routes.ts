@@ -22,6 +22,14 @@ fsRouter.post("/directories", requireAuth, async (req, res) => {
     if (message === "path already exists") {
       return res.status(409).json({ message });
     }
+    if (message === "parent directory does not exist") {
+      return res.status(400).json({ message });
+    }
+    if (message === "parent is not a directory") {
+      return res.status(400).json({
+        message,
+      });
+    }
     return res.status(500).json({ message: "internal error" });
   }
 });
