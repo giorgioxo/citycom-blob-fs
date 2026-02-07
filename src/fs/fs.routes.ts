@@ -34,6 +34,26 @@ fsRouter.post("/directories", requireAuth, async (req, res) => {
   }
 });
 
+fsRouter.post("/files", requireAuth, async (req, res) => {
+  const { path, size } = req.body ?? {};
+  if (!path) {
+    return res.status(400).json({ message: "path required" });
+  }
+  try {
+    await fsService.createFile(req.userId, path, size);
+    return res.status(201).json({ ok: true });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "unknown error";
+    if (message === "path already exists") {
+      return res.status(409).json({ message });
+    }
+    if (message === "parent directory does not exist" || message === "parent is not a directory" || message === "cannot create file at root") {
+      return res.status(400).json({ message });
+    }
+    return res.status(500).json({ message: "internal error" });
+  }
+});
+
 fsRouter.get("/nodes", requireAuth, async (req, res) => {
   const path = String(req.query.path ?? "");
 

@@ -1,5 +1,4 @@
-import type { MetadataStore } from "../metadata/metadata.store";
-import type { FsNode } from "../metadata/metadata.store";
+import type { MetadataStore, FsNode } from "../metadata/metadata.store";
 
 export class FsService {
   constructor(private readonly metadata: MetadataStore) {}
@@ -68,5 +67,35 @@ export class FsService {
     const nodes = await this.metadata.listByPrefix(ownerId, prefix);
 
     return nodes.filter((n) => n.path !== base);
+  }
+
+  async createFile(ownerId: string, path: string, size?: number): Promise<void> {
+    const normalizedPath = this.normalizePath(path);
+    const parentPath = this.parentOf(normalizedPath);
+
+    const exists = await this.metadata.exists(ownerId, normalizedPath);
+    if (exists) {
+      throw new Error("path already exists");
+    }
+    if (parentPath === null) {
+      throw new Error("cannot create file at root");
+    }
+
+    const parentNode = await this.metadata.getNode(ownerId, parentPath);
+    if (!parentNode) {
+      throw new Error("parent directory does not exist");
+    }
+    if (parentNode.kind !== "dir") {
+      throw new Error("parent is not a directory");
+    }
+    const now = new Date();
+    await this.metadata.createNode({
+      ownerId,
+      path: normalizedPath,
+      kind: "file",
+      createDate: now,
+      updateDate: now,
+      size,
+    });
   }
 }
