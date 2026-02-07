@@ -38,6 +38,10 @@ export class FsService {
       if (parentNode.kind !== "dir") {
         throw new Error("parent is not a directory");
       }
+
+      if (parentNode.readonly) {
+        throw new Error("parent is read-only");
+      }
     }
 
     const now = new Date();
@@ -87,6 +91,9 @@ export class FsService {
     }
     if (parentNode.kind !== "dir") {
       throw new Error("parent is not a directory");
+    }
+    if (parentNode.readonly) {
+      throw new Error("parent is read-only");
     }
     const now = new Date();
     await this.metadata.createNode({

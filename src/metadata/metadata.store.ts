@@ -8,6 +8,7 @@ export type FsNode = {
   updateDate: Date;
   size?: number;
   blobHash?: number;
+  readonly?: boolean;
 };
 
 export interface MetadataStore {

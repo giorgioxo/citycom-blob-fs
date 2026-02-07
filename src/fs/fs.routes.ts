@@ -30,6 +30,9 @@ fsRouter.post("/directories", requireAuth, async (req, res) => {
         message,
       });
     }
+    if (message === "parent is read-only") {
+      return res.status(400).json({ message });
+    }
     return res.status(500).json({ message: "internal error" });
   }
 });
@@ -48,6 +51,9 @@ fsRouter.post("/files", requireAuth, async (req, res) => {
       return res.status(409).json({ message });
     }
     if (message === "parent directory does not exist" || message === "parent is not a directory" || message === "cannot create file at root") {
+      return res.status(400).json({ message });
+    }
+    if (message === "parent is read-only") {
       return res.status(400).json({ message });
     }
     return res.status(500).json({ message: "internal error" });
