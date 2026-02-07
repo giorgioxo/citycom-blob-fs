@@ -1,12 +1,21 @@
-import express = require("express");
+import express from "express";
+import { authRouter } from "./auth/auth.route";
+import { fsRouter } from "./fs/fs.routes";
 
 const app = express();
+
 app.use(express.json());
 
-app.get("/health", (_req, res) => {
+app.get("health", (_req, res) => {
   res.json({ ok: true });
 });
 
-app.listen(3000, () => {
-  console.log("api listening on localhost:3-00");
+app.use("/auth", authRouter);
+
+app.use("/api/fs", fsRouter);
+
+const port = 3000;
+
+app.listen(port, () => {
+  console.log(`api listening on localhost:${port}`);
 });
