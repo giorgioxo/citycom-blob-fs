@@ -8,11 +8,12 @@ export type FsNode = {
   updateDate: Date;
   size?: number;
   blobHash?: number;
-  readonly?: boolean;
+  readOnly?: boolean;
 };
 
 export interface MetadataStore {
   createNode(node: FsNode): Promise<void>;
+  updateNode(ownerId: string, path: string, patch: Partial<FsNode>): Promise<void>;
   exists(ownerId: string, path: string): Promise<boolean>;
   getNode(ownerId: string, path: string): Promise<FsNode | undefined>;
   listByPrefix(ownerId: string, prefix: string): Promise<FsNode[]>;
@@ -23,6 +24,13 @@ export class InMemoryMetadataStore implements MetadataStore {
 
   async createNode(node: FsNode): Promise<void> {
     this.nodes.set(this.key(node.ownerId, node.path), node);
+  }
+
+  async updateNode(ownerId: string, path: string, patch: Partial<FsNode>): Promise<void> {
+    const key = this.key(ownerId, path);
+    const current = this.nodes.get(key);
+    if (!current) throw new Error("path not found");
+    this.nodes.set(key, { ...current, ...patch });
   }
 
   async exists(ownerId: string, path: string): Promise<boolean> {

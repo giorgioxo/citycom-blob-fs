@@ -39,7 +39,7 @@ export class FsService {
         throw new Error("parent is not a directory");
       }
 
-      if (parentNode.readonly) {
+      if (parentNode.readOnly) {
         throw new Error("parent is read-only");
       }
     }
@@ -52,6 +52,15 @@ export class FsService {
       kind: "dir",
       createDate: now,
       updateDate: now,
+    });
+  }
+
+  async setReadOnly(ownerId: string, path: string, readOnly: boolean): Promise<void> {
+    const normalizedPath = this.normalizePath(path);
+
+    await this.metadata.updateNode(ownerId, normalizedPath, {
+      readOnly,
+      updateDate: new Date(),
     });
   }
 
@@ -92,7 +101,7 @@ export class FsService {
     if (parentNode.kind !== "dir") {
       throw new Error("parent is not a directory");
     }
-    if (parentNode.readonly) {
+    if (parentNode.readOnly) {
       throw new Error("parent is read-only");
     }
     const now = new Date();

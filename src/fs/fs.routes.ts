@@ -60,6 +60,25 @@ fsRouter.post("/files", requireAuth, async (req, res) => {
   }
 });
 
+fsRouter.patch("/nodes/read-only", requireAuth, async (req, res) => {
+  const { path, readOnly } = req.body ?? {};
+
+  if (!path || typeof readOnly !== "boolean") {
+    return res.status(400).json({ message: "path and readOnly(boolean) required" });
+  }
+
+  try {
+    await fsService.setReadOnly(req.userId, path, readOnly);
+    return res.status(200).json({ ok: true });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "unknown error";
+    if (message === "path not found") {
+      return res.status(404).json({ message });
+    }
+    return res.status(500).json({ message: "internal error" });
+  }
+});
+
 fsRouter.get("/nodes", requireAuth, async (req, res) => {
   const path = String(req.query.path ?? "");
 
