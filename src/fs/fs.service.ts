@@ -19,6 +19,15 @@ export class FsService {
     return path.slice(0, idx);
   }
 
+  async getInfo(ownerId, path: string): Promise<FsNode> {
+    const normalizedPath = this.normalizePath(path);
+
+    const node = await this.metadata.getNode(ownerId, normalizedPath);
+    if (!node) throw new Error("path not found");
+
+    return node;
+  }
+
   async createDirectory(ownerId: string, path: string): Promise<void> {
     const normalizedPath = this.normalizePath(path);
     const parentPath = this.parentOf(normalizedPath);

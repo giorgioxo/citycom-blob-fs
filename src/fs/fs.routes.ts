@@ -235,6 +235,22 @@ fsRouter.get("/nodes", requireAuth, async (req, res) => {
   }
 });
 
+fsRouter.get("/info", requireAuth, async (req, res) => {
+  const path = String(req.query.path ?? "");
+
+  if (!path) return res.status(400).json({ message: "path required" });
+
+  try {
+    const node = await fsService.getInfo(req.userId, path);
+    return res.status(200).json({ node });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "unknown error";
+
+    if (message === "path not found") return res.status(404).json({ message });
+    return res.status(500).json({ message: "internal error" });
+  }
+});
+
 fsRouter.delete("/files", requireAuth, async (req, res) => {
   const { path } = req.body ?? {};
 
