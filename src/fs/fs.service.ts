@@ -167,8 +167,8 @@ export class FsService {
     if (!source) throw new Error("path not found");
     if (source.kind !== "file") throw new Error("not a file");
 
-    const targetExist = await this.metadata.exists(ownerId, to);
-    if (targetExist) throw new Error("target already exists");
+    const targetExists = await this.metadata.exists(ownerId, to);
+    if (targetExists) throw new Error("target already exists");
 
     const fromParent = this.parentOf(from);
     if (!fromParent) throw new Error("cannot copy from root");
@@ -198,6 +198,53 @@ export class FsService {
       blobHash: source.blobHash,
       readOnly: source.readOnly,
     });
+  }
+
+  async moveDirectory(ownerId: string, fromPath: string, toPath: string): Promise<void> {
+    const from = this.normalizePath(fromPath);
+    const to = this.normalizePath(toPath);
+
+    if (from === "/" || to === "/") throw new Error("cannot move root");
+
+    if (to === from || to.startsWith(from + "/")) throw new Error("cannot move directory into itself");
+
+    const source = await this.metadata.getNode(ownerId, from);
+    if (!source) throw new Error("path not found");
+    if (source.kind !== "dir") throw new Error("not a directory");
+
+    const targetExists = await this.metadata.exists(ownerId, to);
+    if (targetExists) throw new Error("target already exists");
+
+    const fromParent = this.parentOf(from);
+    if (!fromParent) throw new Error("cannot move from root");
+
+    const toParent = this.parentOf(to);
+    if (!toParent) throw new Error("target parent required");
+
+    const fromParentNode = await this.metadata.getNode(ownerId, fromParent);
+    if (!fromParentNode) throw new Error("parent directory does not exist");
+    if (fromParentNode.kind !== "dir") throw new Error("parent is not a directory");
+    if (fromParentNode.readOnly) throw new Error("parent is read-only");
+
+    const toParentNode = await this.metadata.getNode(ownerId, toParent);
+    if (!toParentNode) throw new Error("target parent does not exist");
+    if (toParentNode.kind !== "dir") throw new Error("target parent is not a directory");
+    if (toParentNode.readOnly) throw new Error("target parent is read-only");
+
+    const prefix = from + "/";
+    const descendants = await this.metadata.listByPrefix(ownerId, prefix);
+
+    descendants.sort((a, b) => b.path.length - a.path.length);
+
+    for (const node of descendants) {
+      const suffix = node.path.slice(from.length);
+      const newPath = to + suffix;
+      await this.metadata.moveNode(ownerId, node.path, newPath);
+      await this.metadata.updateNode(ownerId, newPath, { updateDate: new Date() });
+    }
+
+    await this.metadata.moveNode(ownerId, from, to);
+    await this.metadata.updateNode(ownerId, to, { updateDate: new Date() });
   }
 
   async deleteFile(ownerId: string, path: string): Promise<void> {
