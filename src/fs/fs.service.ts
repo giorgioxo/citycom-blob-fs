@@ -58,6 +58,15 @@ export class FsService {
   async setReadOnly(ownerId: string, path: string, readOnly: boolean): Promise<void> {
     const normalizedPath = this.normalizePath(path);
 
+    if (normalizedPath === "/") {
+      throw new Error("cannot change root permissions");
+    }
+
+    const node = await this.metadata.getNode(ownerId, normalizedPath);
+    if (!node) {
+      throw new Error("path not found");
+    }
+
     await this.metadata.updateNode(ownerId, normalizedPath, {
       readOnly,
       updateDate: new Date(),
@@ -113,5 +122,27 @@ export class FsService {
       updateDate: now,
       size,
     });
+  }
+
+  async deleteFile(ownerId: string, path: string): Promise<void> {
+    const normalizedPath = this.normalizePath(path);
+
+    if (normalizedPath === "/") throw new Error("cannot delete root");
+
+    const node = await this.metadata.getNode(ownerId, normalizedPath);
+
+    if (!node) throw new Error("path not found");
+    if (node.kind !== "file") throw new Error("not a file");
+
+    const parentPath = this.parentOf(normalizedPath);
+
+    if (parentPath) {
+      const parentNode = await this.metadata.getNode(ownerId, parentPath);
+
+      if (!parentNode) throw new Error("parent directory does not exist");
+      if (parentNode.readOnly) throw new Error("parent is read-only");
+    }
+
+    await this.metadata.deleteNode(ownerId, normalizedPath);
   }
 }
