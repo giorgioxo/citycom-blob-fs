@@ -37,6 +37,19 @@ export class InMemoryMetadataStore implements MetadataStore {
     return this.nodes.get(key);
   }
 
+  async moveNode(ownerId: string, fromPath: string, toPath: string): Promise<void> {
+    const fromKey = this.key(ownerId, fromPath);
+    const toKey = this.key(ownerId, toPath);
+
+    const current = this.nodes.get(fromKey);
+    if (!current) throw new Error("path not found");
+
+    if (this.nodes.has(toKey)) throw new Error("target already exists");
+
+    this.nodes.delete(fromKey);
+    this.nodes.set(toKey, { ...current, path: toPath });
+  }
+
   async listByPrefix(ownerId: string, prefix: string): Promise<FsNode[]> {
     const out: FsNode[] = [];
     const pfx = `${ownerId}:${prefix}`;

@@ -18,4 +18,5 @@ export interface MetadataStore {
   getNode(ownerId: string, path: string): Promise<FsNode | undefined>;
   listByPrefix(ownerId: string, prefix: string): Promise<FsNode[]>;
   deleteNode(ownerId: string, path: string): Promise<void>;
+  moveNode(ownerId: string, fromPath: string, toPath: string): Promise<void>;
 }
