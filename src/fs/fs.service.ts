@@ -247,6 +247,67 @@ export class FsService {
     await this.metadata.updateNode(ownerId, to, { updateDate: new Date() });
   }
 
+  async copyDirectory(ownerId: string, fromPath: string, toPath: string): Promise<void> {
+    const from = this.normalizePath(fromPath);
+    const to = this.normalizePath(toPath);
+
+    if (from === "/" || to === "/") throw new Error("cannot copy root");
+
+    if (to === from || to.startsWith(from + "/")) throw new Error("cannot copy directory into itself");
+
+    const source = await this.metadata.getNode(ownerId, from);
+    if (!source) throw new Error("path not found");
+    if (source.kind !== "dir") throw new Error("not a directory");
+
+    const targetExists = await this.metadata.exists(ownerId, to);
+    if (targetExists) throw new Error("target already exists");
+
+    const fromParent = this.parentOf(from);
+    if (!fromParent) throw new Error("cannot copy from root");
+
+    const toParent = this.parentOf(to);
+    if (!toParent) throw new Error("target parent required");
+
+    const fromParentNode = await this.metadata.getNode(ownerId, fromParent);
+    if (!fromParentNode) throw new Error("parent directory does not exist");
+    if (fromParentNode.kind !== "dir") throw new Error("parent is not a directory");
+    if (fromParentNode.readOnly) throw new Error("parent is read-only");
+
+    const toParentNode = await this.metadata.getNode(ownerId, toParent);
+    if (!toParentNode) throw new Error("target parent does not exist");
+    if (toParentNode.kind !== "dir") throw new Error("target parent is not a directory");
+    if (toParentNode.readOnly) throw new Error("target parent is read-only");
+
+    const now = new Date();
+
+    await this.metadata.createNode({
+      ownerId,
+      path: to,
+      kind: "dir",
+      createDate: now,
+      updateDate: now,
+      readOnly: source.readOnly,
+    });
+
+    const prefix = from + "/";
+    const descendants = await this.metadata.listByPrefix(ownerId, prefix);
+
+    descendants.sort((a, b) => a.path.length - b.path.length);
+
+    for (const node of descendants) {
+      const suffix = node.path.slice(from.length);
+      const newPath = to + suffix;
+
+      await this.metadata.createNode({
+        ...node,
+        ownerId,
+        path: newPath,
+        createDate: now,
+        updateDate: now,
+      });
+    }
+  }
+
   async deleteFile(ownerId: string, path: string): Promise<void> {
     const normalizedPath = this.normalizePath(path);
 
