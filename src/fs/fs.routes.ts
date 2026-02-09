@@ -124,4 +124,25 @@ fsRouter.delete("/files", requireAuth, async (req, res) => {
   }
 });
 
+fsRouter.delete("/directories", requireAuth, async (req, res) => {
+  const { path } = req.body ?? {};
+
+  if (!path) return res.status(400).json({ message: "path required" });
+
+  try {
+    await fsService.deleteDirectory(req.userId, path);
+    return res.status(200).json({ ok: true });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "unknown error";
+
+    if (message === "path not found") return res.status(404).json({ message });
+    if (message === "not a directory") return res.status(400).json({ message });
+    if (message === "cannot delete root") return res.status(400).json({ message });
+    if (message === "parent is read-only") return res.status(400).json({ message });
+    if (message === "parent directory does not exist") return res.status(400).json({ message });
+
+    return res.status(500).json({ message: "internal error" });
+  }
+});
+
 export { fsRouter };

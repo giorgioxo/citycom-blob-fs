@@ -55,6 +55,39 @@ export class FsService {
     });
   }
 
+  async createFile(ownerId: string, path: string, size?: number): Promise<void> {
+    const normalizedPath = this.normalizePath(path);
+    const parentPath = this.parentOf(normalizedPath);
+
+    const exists = await this.metadata.exists(ownerId, normalizedPath);
+    if (exists) {
+      throw new Error("path already exists");
+    }
+    if (parentPath === null) {
+      throw new Error("cannot create file at root");
+    }
+
+    const parentNode = await this.metadata.getNode(ownerId, parentPath);
+    if (!parentNode) {
+      throw new Error("parent directory does not exist");
+    }
+    if (parentNode.kind !== "dir") {
+      throw new Error("parent is not a directory");
+    }
+    if (parentNode.readOnly) {
+      throw new Error("parent is read-only");
+    }
+    const now = new Date();
+    await this.metadata.createNode({
+      ownerId,
+      path: normalizedPath,
+      kind: "file",
+      createDate: now,
+      updateDate: now,
+      size,
+    });
+  }
+
   async setReadOnly(ownerId: string, path: string, readOnly: boolean): Promise<void> {
     const normalizedPath = this.normalizePath(path);
 
@@ -91,39 +124,6 @@ export class FsService {
     return nodes.filter((n) => n.path !== base);
   }
 
-  async createFile(ownerId: string, path: string, size?: number): Promise<void> {
-    const normalizedPath = this.normalizePath(path);
-    const parentPath = this.parentOf(normalizedPath);
-
-    const exists = await this.metadata.exists(ownerId, normalizedPath);
-    if (exists) {
-      throw new Error("path already exists");
-    }
-    if (parentPath === null) {
-      throw new Error("cannot create file at root");
-    }
-
-    const parentNode = await this.metadata.getNode(ownerId, parentPath);
-    if (!parentNode) {
-      throw new Error("parent directory does not exist");
-    }
-    if (parentNode.kind !== "dir") {
-      throw new Error("parent is not a directory");
-    }
-    if (parentNode.readOnly) {
-      throw new Error("parent is read-only");
-    }
-    const now = new Date();
-    await this.metadata.createNode({
-      ownerId,
-      path: normalizedPath,
-      kind: "file",
-      createDate: now,
-      updateDate: now,
-      size,
-    });
-  }
-
   async deleteFile(ownerId: string, path: string): Promise<void> {
     const normalizedPath = this.normalizePath(path);
 
@@ -144,5 +144,33 @@ export class FsService {
     }
 
     await this.metadata.deleteNode(ownerId, normalizedPath);
+  }
+
+  async deleteDirectory(ownerId: string, path: string): Promise<void> {
+    const base = this.normalizePath(path);
+
+    if (base === "/") throw new Error("cannot delete root");
+
+    const baseNode = await this.metadata.getNode(ownerId, base);
+    if (!baseNode) throw new Error("path not found");
+    if (baseNode.kind !== "dir") throw new Error("not a directory");
+
+    const parentPath = this.parentOf(base);
+    if (parentPath) {
+      const parentNode = await this.metadata.getNode(ownerId, parentPath);
+      if (!parentNode) throw new Error("parent directory does not exist");
+      if (parentNode.readOnly) throw new Error("parent is read-only");
+    }
+
+    const prefix = base + "/";
+
+    const descendants = await this.metadata.listByPrefix(ownerId, prefix);
+    descendants.sort((a, b) => b.path.length - a.path.length);
+
+    for (const node of descendants) {
+      await this.metadata.deleteNode(ownerId, node.path);
+    }
+
+    await this.metadata.deleteNode(ownerId, base);
   }
 }
