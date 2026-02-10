@@ -9,23 +9,14 @@ export class FilesService {
     const parentPath = parentOf(normalizedPath);
 
     const exists = await this.metadata.exists(ownerId, normalizedPath);
-    if (exists) {
-      throw new Error("path already exists");
-    }
-    if (parentPath === null) {
-      throw new Error("cannot create file at root");
-    }
+    if (exists) throw new Error("path already exists");
+    if (parentPath === null) throw new Error("cannot create file at root");
 
     const parentNode = await this.metadata.getNode(ownerId, parentPath);
-    if (!parentNode) {
-      throw new Error("parent directory does not exist");
-    }
-    if (parentNode.kind !== "dir") {
-      throw new Error("parent is not a directory");
-    }
-    if (parentNode.readOnly) {
-      throw new Error("parent is read-only");
-    }
+    if (!parentNode) throw new Error("parent directory does not exist");
+    if (parentNode.kind !== "dir") throw new Error("parent is not a directory");
+    if (parentNode.readOnly) throw new Error("parent is read-only");
+
     const now = new Date();
     await this.metadata.createNode({
       ownerId,

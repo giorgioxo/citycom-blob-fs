@@ -6,15 +6,10 @@ export class DirectoriesService {
 
   async setReadOnly(ownerId: string, path: string, readOnly: boolean): Promise<void> {
     const normalizedPath = normalizePath(path);
-
-    if (normalizedPath === "/") {
-      throw new Error("cannot change root permissions");
-    }
+    if (normalizedPath === "/") throw new Error("cannot change root permissions");
 
     const node = await this.metadata.getNode(ownerId, normalizedPath);
-    if (!node) {
-      throw new Error("path not found");
-    }
+    if (!node) throw new Error("path not found");
 
     await this.metadata.updateNode(ownerId, normalizedPath, {
       readOnly,
@@ -26,12 +21,8 @@ export class DirectoriesService {
     const base = normalizePath(path);
 
     const baseNode = await this.metadata.getNode(ownerId, base);
-    if (!baseNode) {
-      throw new Error("path not found");
-    }
-    if (baseNode.kind !== "dir") {
-      throw new Error("path is not a directory");
-    }
+    if (!baseNode) throw new Error("path not found");
+    if (baseNode.kind !== "dir") throw new Error("path is not a directory");
 
     const prefix = base === "/" ? "/" : base + "/";
 
@@ -45,24 +36,14 @@ export class DirectoriesService {
     const parentPath = parentOf(normalizedPath);
 
     const exists = await this.metadata.exists(ownerId, normalizedPath);
-
-    if (exists) {
-      throw new Error("path already exists");
-    }
+    if (exists) throw new Error("path already exists");
 
     if (parentPath !== null) {
       const parentNode = await this.metadata.getNode(ownerId, parentPath);
-      if (!parentNode) {
-        throw new Error("parent directory does not exist");
-      }
 
-      if (parentNode.kind !== "dir") {
-        throw new Error("parent is not a directory");
-      }
-
-      if (parentNode.readOnly) {
-        throw new Error("parent is read-only");
-      }
+      if (!parentNode) throw new Error("parent directory does not exist");
+      if (parentNode.kind !== "dir") throw new Error("parent is not a directory");
+      if (parentNode.readOnly) throw new Error("parent is read-only");
     }
 
     const now = new Date();

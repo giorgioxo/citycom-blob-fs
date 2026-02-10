@@ -1,4 +1,4 @@
-import { normalizePath } from "./path.utils";
+import { normalizePath } from "../shared/path.utils";
 import type { FsNode, MetadataStore } from "../../metadata/metadata.store";
 
 export class NodesService {
