@@ -1,15 +1,24 @@
 import pg from "pg";
-import { mustGetEnv } from "../modules/auth/env";
+import { isProd } from "../modules/auth/env";
 
 const { Pool } = pg;
 
 export const pool = new Pool({
-  connectionString: mustGetEnv("DATABASE_URL") || "postgres://postgres:postgres@localhost:5432/fsdb",
-  max: 10,
-  idleTimeoutMillis: 30_000,
-  connectionTimeoutMillis: 5_000,
+  connectionString: process.env.DATABASE_URL,
+  ssl: isProd ? { rejectUnauthorized: false } : undefined,
 });
 
-pool.on("error", (err) => {
-  console.error("pg pool error", err);
-});
+export async function withTx<T>(fn: (client: pg.PoolClient) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await fn(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
+  }
+}

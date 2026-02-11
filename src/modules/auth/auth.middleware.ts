@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { verifyAccessToken } from "./jwt";
-import { findUserById } from "./users.store";
+import { findUserById } from "./users.pg.store";
 
 function getBearerToken(req: Request): string | null {
   const h = req.header("authorization");
@@ -8,11 +8,10 @@ function getBearerToken(req: Request): string | null {
 
   const [type, token] = h.split(" ");
   if (type !== "Bearer" || !token) return null;
-
   return token.trim();
 }
 
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const token = getBearerToken(req);
   if (!token) return res.status(401).json({ message: "missing auth token" });
 
@@ -20,11 +19,11 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     const payload = verifyAccessToken(token);
     const userId = payload.sub;
 
-    const user = findUserById(userId);
+    const user = await findUserById(userId);
     if (!user) return res.status(401).json({ message: "invalid auth" });
 
     req.userId = userId;
-    next();
+    return next();
   } catch {
     return res.status(401).json({ message: "invalid auth" });
   }

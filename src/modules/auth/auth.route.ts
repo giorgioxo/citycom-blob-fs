@@ -2,7 +2,7 @@ import { Router } from "express";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 
-import { createUser, findUserByUsername, findUserById, addRefreshToken, hasRefreshToken, removeRefreshToken, removeAllRefreshTokens } from "./users.store";
+import { createUser, findUserByUsername, findUserById, addRefreshToken, hasRefreshToken, removeRefreshToken, removeAllRefreshTokens } from "./users.pg.store";
 
 import { signAccessToken, signRefreshToken, verifyRefreshToken, ACCESS_EXPIRES_IN_SECONDS } from "./jwt";
 
@@ -21,13 +21,13 @@ authRouter.post("/register", async (req, res) => {
   if (u.length < 3) return res.status(400).json({ message: "username too short" });
   if (password.length < 6) return res.status(400).json({ message: "password too short" });
 
-  const existingUser = findUserByUsername(u);
+  const existingUser = await findUserByUsername(u);
   if (existingUser) return res.status(409).json({ message: "user already exists" });
 
   const userId = crypto.randomUUID();
   const passwordHash = await bcrypt.hash(password, 10);
 
-  const user = createUser(userId, u, passwordHash);
+  const user = await createUser(userId, u, passwordHash);
 
   return res.status(201).json({ id: user.id, username: user.username });
 });
@@ -40,7 +40,7 @@ authRouter.post("/login", async (req, res) => {
 
   const u = username.trim();
 
-  const user = findUserByUsername(u);
+  const user = await findUserByUsername(u);
   if (!user) return res.status(401).json({ message: "invalid credentials" });
 
   const ok = await bcrypt.compare(password, user.passwordHash);
@@ -49,7 +49,7 @@ authRouter.post("/login", async (req, res) => {
   const accessToken = signAccessToken(user.id);
 
   const refreshToken = signRefreshToken(user.id);
-  addRefreshToken(user.id, refreshToken);
+  await addRefreshToken(user.id, refreshToken);
   setRefreshCookie(res, refreshToken);
 
   return res.status(200).json({
@@ -63,7 +63,6 @@ authRouter.post("/login", async (req, res) => {
 
 authRouter.post("/refresh", async (req, res) => {
   const cookieToken = getRefreshToken(req);
-
   const bodyToken = req.body?.refreshToken && typeof req.body.refreshToken === "string" ? req.body.refreshToken : null;
 
   const refreshToken = cookieToken ?? bodyToken;
@@ -73,17 +72,15 @@ authRouter.post("/refresh", async (req, res) => {
     const payload = verifyRefreshToken(refreshToken);
     const userId = payload.sub;
 
-    const user = findUserById(userId);
+    const user = await findUserById(userId);
     if (!user) return res.status(401).json({ message: "invalid auth" });
 
-    if (!hasRefreshToken(userId, refreshToken)) {
-      return res.status(401).json({ message: "invalid auth" });
-    }
+    const ok = await hasRefreshToken(userId, refreshToken);
+    if (!ok) return res.status(401).json({ message: "invalid auth" });
 
-    // rotate refresh token
-    removeRefreshToken(userId, refreshToken);
+    await removeRefreshToken(userId, refreshToken);
     const newRefreshToken = signRefreshToken(userId);
-    addRefreshToken(userId, newRefreshToken);
+    await addRefreshToken(userId, newRefreshToken);
     setRefreshCookie(res, newRefreshToken);
 
     const newAccessToken = signAccessToken(userId);
@@ -105,13 +102,11 @@ authRouter.post("/logout", async (req, res) => {
 
   clearRefreshCookie(res);
 
-  if (!refreshToken) {
-    return res.status(200).json({ ok: true });
-  }
+  if (!refreshToken) return res.status(200).json({ ok: true });
 
   try {
     const payload = verifyRefreshToken(refreshToken);
-    removeRefreshToken(payload.sub, refreshToken);
+    await removeRefreshToken(payload.sub, refreshToken);
     return res.status(200).json({ ok: true });
   } catch {
     return res.status(200).json({ ok: true });
@@ -120,7 +115,7 @@ authRouter.post("/logout", async (req, res) => {
 
 authRouter.post("/logout-all", requireAuth, async (req, res) => {
   const userId = req.userId!;
-  removeAllRefreshTokens(userId);
+  await removeAllRefreshTokens(userId);
   clearRefreshCookie(res);
   return res.status(200).json({ ok: true });
 });
