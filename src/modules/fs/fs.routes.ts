@@ -15,7 +15,7 @@ const fsRouter = Router();
 
 const metadata = new InMemoryMetadataStore();
 const blobs = new InMemoryBlobStore();
-const dirs = new DirectoriesService(metadata);
+const dirs = new DirectoriesService(metadata, blobs);
 const files = new FilesService(metadata, blobs);
 const nodes = new NodesService(metadata);
 

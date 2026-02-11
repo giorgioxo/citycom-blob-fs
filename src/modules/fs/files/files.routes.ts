@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../../auth/auth.middleware";
 import { FsService } from "../fs.service";
+import { readBodyBuffer } from "../shared/read-body-buffer";
 
 export function filesRouter(fsService: FsService): Router {
   const router = Router();
@@ -94,39 +95,37 @@ export function filesRouter(fsService: FsService): Router {
   });
 
   router.put("/content", requireAuth, async (req, res) => {
-    const path = String(req.query.path ?? "");
+    const q = req.query.path;
+    if (Array.isArray(q)) return res.status(400).json({ message: "path required" });
+
+    const path = String(q ?? "");
     if (!path) return res.status(400).json({ message: "path required" });
 
-    const chunks: Buffer[] = [];
+    try {
+      const content = await readBodyBuffer(req, 10 * 1024 * 1024);
+      const result = await fsService.writeFileContent(req.userId, path, content);
+      return res.status(200).json(result);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "unknown error";
 
-    req.on("error", () => res.status(400).json({ message: "invalid request body" }));
+      if (message === "payload too large") return res.status(413).json({ message });
+      if (message === "path not found") return res.status(404).json({ message });
+      if (message === "not a file") return res.status(400).json({ message });
+      if (message === "invalid request body" || message === "request aborted") return res.status(400).json({ message });
 
-    req.on("data", (c) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
-
-    req.on("end", async () => {
-      try {
-        const content = Buffer.concat(chunks);
-        const result = await fsService.writeFileContent(req.userId, path, content);
-        return res.status(200).json(result);
-      } catch (e) {
-        const message = e instanceof Error ? e.message : "unknown error";
-
-        if (message === "path not found") return res.status(404).json({ message });
-        if (message === "not a file") return res.status(400).json({ message });
-
-        if (
-          message === "cannot write to root" ||
-          message === "cannot write at root" ||
-          message === "parent directory does not exist" ||
-          message === "parent is not a directory" ||
-          message === "parent is read-only" ||
-          message === "file is read-only"
-        ) {
-          return res.status(400).json({ message });
-        }
-        return res.status(500).json({ message: "internal error" });
+      if (
+        message === "cannot write to root" ||
+        message === "cannot write at root" ||
+        message === "parent directory does not exist" ||
+        message === "parent is not a directory" ||
+        message === "parent is read-only" ||
+        message === "file is read-only"
+      ) {
+        return res.status(400).json({ message });
       }
-    });
+
+      return res.status(500).json({ message: "internal error" });
+    }
   });
 
   router.delete("/", requireAuth, async (req, res) => {

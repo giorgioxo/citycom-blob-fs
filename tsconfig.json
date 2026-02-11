@@ -12,6 +12,9 @@
     "strict": false,
     "skipLibCheck": true,
 
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
 

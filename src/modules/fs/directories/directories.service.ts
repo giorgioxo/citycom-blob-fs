@@ -1,8 +1,9 @@
 import type { FsNode, MetadataStore } from "../../metadata/metadata.store";
+import type { BlobStore } from "../../blob/blob.store";
 import { normalizePath, parentOf } from "../shared/path.utils";
 
 export class DirectoriesService {
-  constructor(private readonly metadata: MetadataStore) {}
+  constructor(private readonly metadata: MetadataStore, private readonly blobs: BlobStore) {}
 
   async setReadOnly(ownerId: string, path: string, readOnly: boolean): Promise<void> {
     const normalizedPath = normalizePath(path);
@@ -162,6 +163,10 @@ export class DirectoriesService {
         createDate: now,
         updateDate: now,
       });
+
+      if (node.kind === "file" && node.blobHash) {
+        await this.blobs.retain(node.blobHash);
+      }
     }
   }
 
@@ -187,6 +192,9 @@ export class DirectoriesService {
     descendants.sort((a, b) => b.path.length - a.path.length);
 
     for (const node of descendants) {
+      if (node.kind === "file" && node.blobHash) {
+        await this.blobs.release(node.blobHash);
+      }
       await this.metadata.deleteNode(ownerId, node.path);
     }
 

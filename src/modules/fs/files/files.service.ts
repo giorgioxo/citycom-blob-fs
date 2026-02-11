@@ -1,6 +1,7 @@
 import type { MetadataStore } from "../../metadata/metadata.store";
 import { normalizePath, parentOf } from "../shared/path.utils";
-import { BlobStore } from "../../blob/blob.store";
+import type { BlobStore } from "../../blob/blob.store";
+import { hashBuffer } from "../../blob/blob-hash";
 
 export class FilesService {
   constructor(private readonly metadata: MetadataStore, private readonly blobs: BlobStore) {}
@@ -103,6 +104,10 @@ export class FilesService {
       blobHash: source.blobHash,
       readOnly: source.readOnly,
     });
+
+    if (source.blobHash) {
+      await this.blobs.retain(source.blobHash);
+    }
   }
 
   async writeFileContent(ownerId: string, path: string, content: Buffer): Promise<{ hash: string; size: number }> {
@@ -123,6 +128,16 @@ export class FilesService {
     if (node.readOnly) throw new Error("file is read-only");
 
     const oldHash = node.blobHash;
+    const newHash = hashBuffer(content);
+    const newSize = content.length;
+
+    if (oldHash && oldHash === newHash) {
+      await this.metadata.updateNode(ownerId, filePath, {
+        size: newSize,
+        updateDate: new Date(),
+      });
+      return { hash: newHash, size: newSize };
+    }
 
     const { hash, size } = await this.blobs.put(content);
 
@@ -132,7 +147,7 @@ export class FilesService {
       updateDate: new Date(),
     });
 
-    if (oldHash && oldHash !== hash) {
+    if (oldHash) {
       await this.blobs.release(oldHash);
     }
 
@@ -158,6 +173,12 @@ export class FilesService {
       if (parentNode.readOnly) throw new Error("parent is read-only");
     }
 
+    const oldHash = node.blobHash;
+
     await this.metadata.deleteNode(ownerId, normalizedPath);
+
+    if (oldHash) {
+      await this.blobs.release(oldHash);
+    }
   }
 }
