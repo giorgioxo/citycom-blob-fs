@@ -8,7 +8,7 @@ export function refreshCookieOptions(): CookieOptions {
     httpOnly: true,
     secure: isProd,
     sameSite: "lax",
-    path: "/auth/refresh",
+    path: "/auth",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   };
 }
