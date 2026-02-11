@@ -17,6 +17,7 @@ function rowToNode(r: any): FsNode {
 export class PostgresMetadataStore implements MetadataStore {
   async createNode(node: FsNode, tx?: DbClient): Promise<void> {
     const db = tx ?? pool;
+
     await db.query(
       `
       insert into fs_nodes (owner_id, path, kind, create_date, update_date, size, blob_hash, read_only)
@@ -34,7 +35,7 @@ export class PostgresMetadataStore implements MetadataStore {
 
     const next: FsNode = { ...current, ...patch };
 
-    await db.query(
+    const r = await db.query(
       `
       update fs_nodes
       set
@@ -48,6 +49,8 @@ export class PostgresMetadataStore implements MetadataStore {
       `,
       [ownerId, path, next.kind, next.createDate, next.updateDate, next.size ?? null, next.blobHash ?? null, next.readOnly ?? false]
     );
+
+    if ((r.rowCount ?? 0) === 0) throw new Error("path not found");
   }
 
   async exists(ownerId: string, path: string, tx?: DbClient): Promise<boolean> {
@@ -65,7 +68,7 @@ export class PostgresMetadataStore implements MetadataStore {
     }
 
     const r = await db.query(`select 1 from fs_nodes where owner_id = $1 and path = $2 limit 1`, [ownerId, path]);
-    return (r.rowCount ?? 0) > 0;
+    return (r.rowCount ?? r.rows.length) > 0;
   }
 
   async getNode(ownerId: string, path: string, tx?: DbClient): Promise<FsNode | undefined> {
@@ -104,9 +107,6 @@ export class PostgresMetadataStore implements MetadataStore {
 
   async moveNode(ownerId: string, fromPath: string, toPath: string, tx?: DbClient): Promise<void> {
     const db = tx ?? pool;
-
-    const exists = await this.exists(ownerId, toPath, tx);
-    if (exists) throw new Error("target already exists");
 
     const r = await db.query(
       `

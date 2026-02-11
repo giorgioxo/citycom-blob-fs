@@ -7,16 +7,42 @@ export class DirectoriesService {
   constructor(private readonly metadata: MetadataStore, private readonly blobs: BlobStore) {}
 
   async setReadOnly(ownerId: string, path: string, readOnly: boolean): Promise<void> {
-    const normalizedPath = normalizePath(path);
-    if (normalizedPath === "/") throw new Error("cannot change root permissions");
+    return withTx(async (tx) => {
+      const normalizedPath = normalizePath(path);
+      if (normalizedPath === "/") throw new Error("cannot change root permissions");
 
-    const node = await this.metadata.getNode(ownerId, normalizedPath);
-    if (!node) throw new Error("path not found");
+      const node = await this.metadata.getNode(ownerId, normalizedPath, tx);
+      if (!node) throw new Error("path not found");
 
-    await this.metadata.updateNode(ownerId, normalizedPath, {
-      readOnly,
-      updateDate: new Date(),
+      await this.metadata.updateNode(ownerId, normalizedPath, { readOnly, updateDate: new Date() }, tx);
     });
+  }
+
+  async listDirectory(ownerId: string, path: string): Promise<FsNode[]> {
+    const base = normalizePath(path);
+
+    const baseNode = await this.metadata.getNode(ownerId, base);
+    if (!baseNode) throw new Error("path not found");
+    if (baseNode.kind !== "dir") throw new Error("path is not a directory");
+
+    const prefix = base === "/" ? "/" : base + "/";
+
+    const nodes = await this.metadata.listByPrefix(ownerId, prefix);
+
+    const out: FsNode[] = [];
+    for (const n of nodes) {
+      if (n.path === base) continue;
+      if (!n.path.startsWith(prefix)) continue;
+
+      const suffix = n.path.slice(prefix.length);
+      if (!suffix) continue;
+      if (suffix.includes("/")) continue;
+
+      out.push(n);
+    }
+
+    out.sort((a, b) => a.path.localeCompare(b.path));
+    return out;
   }
 
   async listNodesRecursive(ownerId: string, path: string): Promise<FsNode[]> {
@@ -35,27 +61,61 @@ export class DirectoriesService {
 
   async createDirectory(ownerId: string, path: string): Promise<void> {
     const normalizedPath = normalizePath(path);
-    const parentPath = parentOf(normalizedPath);
+    if (normalizedPath === "/") throw new Error("path already exists");
 
-    const exists = await this.metadata.exists(ownerId, normalizedPath);
-    if (exists) throw new Error("path already exists");
+    return withTx(async (tx) => {
+      const parts = normalizedPath.split("/").filter(Boolean);
 
-    if (parentPath !== null) {
-      const parentNode = await this.metadata.getNode(ownerId, parentPath);
+      let currentPath = "/";
+      let currentNode = await this.metadata.getNode(ownerId, currentPath, tx);
 
-      if (!parentNode) throw new Error("parent directory does not exist");
-      if (parentNode.kind !== "dir") throw new Error("parent is not a directory");
-      if (parentNode.readOnly) throw new Error("parent is read-only");
-    }
+      if (!currentNode) throw new Error("parent directory does not exist");
+      if (currentNode.kind !== "dir") throw new Error("parent is not a directory");
+      if (currentNode.readOnly) throw new Error("parent is read-only");
 
-    const now = new Date();
+      for (let i = 0; i < parts.length; i++) {
+        const name = parts[i];
+        const isLast = i === parts.length - 1;
 
-    await this.metadata.createNode({
-      ownerId,
-      path: normalizedPath,
-      kind: "dir",
-      createDate: now,
-      updateDate: now,
+        const nextPath = currentPath === "/" ? `/${name}` : `${currentPath}/${name}`;
+
+        const existing = await this.metadata.getNode(ownerId, nextPath, tx);
+
+        if (existing) {
+          if (existing.kind !== "dir") throw new Error("parent is not a directory");
+          if (existing.readOnly) throw new Error("parent is read-only");
+          if (isLast) throw new Error("path already exists");
+
+          currentPath = nextPath;
+          currentNode = existing;
+          continue;
+        }
+
+        if (!currentNode) throw new Error("parent directory does not exist");
+        if (currentNode.kind !== "dir") throw new Error("parent is not a directory");
+        if (currentNode.readOnly) throw new Error("parent is read-only");
+
+        const now = new Date();
+
+        await this.metadata.createNode(
+          {
+            ownerId,
+            path: nextPath,
+            kind: "dir",
+            createDate: now,
+            updateDate: now,
+            readOnly: false,
+          },
+          tx
+        );
+
+        currentPath = nextPath;
+        currentNode = await this.metadata.getNode(ownerId, currentPath, tx);
+
+        if (!currentNode) throw new Error("parent directory does not exist");
+        if (currentNode.kind !== "dir") throw new Error("parent is not a directory");
+        if (currentNode.readOnly) throw new Error("parent is read-only");
+      }
     });
   }
 

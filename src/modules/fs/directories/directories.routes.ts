@@ -4,6 +4,27 @@ import { FsService } from "../fs.service";
 
 export function directoriesRouter(fsService: FsService): Router {
   const router = Router();
+
+  router.get("/", requireAuth, async (req, res) => {
+    const q = req.query.path;
+    if (Array.isArray(q)) return res.status(400).json({ message: "path required" });
+
+    const path = String(q ?? "");
+    if (!path) return res.status(400).json({ message: "path required" });
+
+    try {
+      const nodes = await fsService.listDirectory(req.userId, path);
+      return res.status(200).json({ nodes });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "unknown error";
+
+      if (message === "path not found") return res.status(404).json({ message });
+      if (message === "path is not a directory") return res.status(400).json({ message });
+
+      return res.status(500).json({ message: "internal error" });
+    }
+  });
+
   router.post("/", requireAuth, async (req, res) => {
     const { path } = req.body ?? {};
 
@@ -23,9 +44,7 @@ export function directoriesRouter(fsService: FsService): Router {
         return res.status(400).json({ message });
       }
       if (message === "parent is not a directory") {
-        return res.status(400).json({
-          message,
-        });
+        return res.status(400).json({ message });
       }
       if (message === "parent is read-only") {
         return res.status(400).json({ message });
@@ -121,5 +140,6 @@ export function directoriesRouter(fsService: FsService): Router {
       return res.status(500).json({ message: "internal error" });
     }
   });
+
   return router;
 }

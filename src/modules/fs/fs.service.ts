@@ -1,4 +1,4 @@
-import type { FsNode, MetadataStore } from "../metadata/metadata.store";
+import type { FsNode } from "../metadata/metadata.store";
 import { DirectoriesService } from "./directories/directories.service";
 import { FilesService } from "./files/files.service";
 import { NodesService } from "./nodes/nodes.service";
@@ -12,6 +12,10 @@ export class FsService {
 
   createDirectory(ownerId: string, path: string): Promise<void> {
     return this.dirs.createDirectory(ownerId, path);
+  }
+
+  listDirectory(ownerId: string, path: string): Promise<FsNode[]> {
+    return this.dirs.listDirectory(ownerId, path);
   }
 
   moveDirectory(ownerId: string, fromPath: string, toPath: string): Promise<void> {
