@@ -154,6 +154,23 @@ export class FilesService {
     return { hash, size };
   }
 
+  async readFileContent(ownerId: string, path: string): Promise<{ hash: string; content: Buffer }> {
+    const filePath = normalizePath(path);
+    if (filePath === "/") throw new Error("cannot read root");
+
+    const node = await this.metadata.getNode(ownerId, filePath);
+    if (!node) throw new Error("path not found");
+    if (node.kind !== "file") throw new Error("not a file");
+
+    const hash = node.blobHash;
+    if (!hash) throw new Error("file has no content");
+
+    const content = await this.blobs.get(hash);
+    if (!content) throw new Error("blob not found");
+
+    return { hash, content };
+  }
+
   async deleteFile(ownerId: string, path: string): Promise<void> {
     const normalizedPath = normalizePath(path);
 

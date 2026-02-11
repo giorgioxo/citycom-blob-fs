@@ -50,6 +50,10 @@ export class FsService {
     return this.files.writeFileContent(ownerId, path, content);
   }
 
+  readFileContent(ownerId: string, path: string): Promise<{ hash: string; content: Buffer }> {
+    return this.files.readFileContent(ownerId, path);
+  }
+
   deleteFile(ownerId: string, path: string): Promise<void> {
     return this.files.deleteFile(ownerId, path);
   }

@@ -94,6 +94,35 @@ export function filesRouter(fsService: FsService): Router {
     }
   });
 
+  router.get("/content", requireAuth, async (req, res) => {
+    const q = req.query.path;
+    if (Array.isArray(q)) return res.status(400).json({ message: "path required" });
+
+    const path = String(q ?? "");
+    if (!path) return res.status(400).json({ message: "path required" });
+
+    try {
+      const { hash, content } = await fsService.readFileContent(req.userId, path);
+
+      res.setHeader("content-type", "application/octet-stream");
+      res.setHeader("content-length", String(content.length));
+      res.setHeader("etag", hash);
+
+      return res.status(200).send(content);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "unknown error";
+
+      if (message === "path not found") return res.status(404).json({ message });
+      if (message === "not a file") return res.status(400).json({ message });
+      if (message === "cannot read root") return res.status(400).json({ message });
+
+      if (message === "file has no content") return res.status(404).json({ message });
+      if (message === "blob not found") return res.status(500).json({ message: "internal error", detail: message });
+
+      return res.status(500).json({ message: "internal error" });
+    }
+  });
+
   router.put("/content", requireAuth, async (req, res) => {
     const q = req.query.path;
     if (Array.isArray(q)) return res.status(400).json({ message: "path required" });
