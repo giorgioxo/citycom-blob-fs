@@ -1,8 +1,9 @@
 import type { MetadataStore } from "../../metadata/metadata.store";
 import { normalizePath, parentOf } from "../shared/path.utils";
+import { BlobStore } from "../../blob/blob.store";
 
 export class FilesService {
-  constructor(private readonly metadata: MetadataStore) {}
+  constructor(private readonly metadata: MetadataStore, private readonly blobs: BlobStore) {}
 
   async createFile(ownerId: string, path: string, size?: number): Promise<void> {
     const normalizedPath = normalizePath(path);
@@ -102,6 +103,40 @@ export class FilesService {
       blobHash: source.blobHash,
       readOnly: source.readOnly,
     });
+  }
+
+  async writeFileContent(ownerId: string, path: string, content: Buffer): Promise<{ hash: string; size: number }> {
+    const filePath = normalizePath(path);
+    if (filePath === "/") throw new Error("cannot write to root");
+
+    const node = await this.metadata.getNode(ownerId, filePath);
+    if (!node) throw new Error("path not found");
+    if (node.kind !== "file") throw new Error("not a file");
+
+    const parentPath = parentOf(filePath);
+    if (!parentPath) throw new Error("cannot write at root");
+
+    const parentNode = await this.metadata.getNode(ownerId, parentPath);
+    if (!parentNode) throw new Error("parent directory does not exist");
+    if (parentNode.kind !== "dir") throw new Error("parent is not a directory");
+    if (parentNode.readOnly) throw new Error("parent is read-only");
+    if (node.readOnly) throw new Error("file is read-only");
+
+    const oldHash = node.blobHash;
+
+    const { hash, size } = await this.blobs.put(content);
+
+    await this.metadata.updateNode(ownerId, filePath, {
+      blobHash: hash,
+      size,
+      updateDate: new Date(),
+    });
+
+    if (oldHash && oldHash !== hash) {
+      await this.blobs.release(oldHash);
+    }
+
+    return { hash, size };
   }
 
   async deleteFile(ownerId: string, path: string): Promise<void> {

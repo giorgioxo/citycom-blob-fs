@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { InMemoryMetadataStore } from "../metadata/in-memory-metadata.store";
+import { InMemoryBlobStore } from "../blob/in-memory-blob.store";
 import { FsService } from "./fs.service";
 
 import { DirectoriesService } from "./directories/directories.service";
@@ -13,8 +14,9 @@ import { nodesRouter } from "./nodes/nodes.routes";
 const fsRouter = Router();
 
 const metadata = new InMemoryMetadataStore();
+const blobs = new InMemoryBlobStore();
 const dirs = new DirectoriesService(metadata);
-const files = new FilesService(metadata);
+const files = new FilesService(metadata, blobs);
 const nodes = new NodesService(metadata);
 
 const fsService = new FsService(files, dirs, nodes);

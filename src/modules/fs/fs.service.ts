@@ -1,4 +1,4 @@
-import type { FsNode } from "../metadata/metadata.store";
+import type { FsNode, MetadataStore } from "../metadata/metadata.store";
 import { DirectoriesService } from "./directories/directories.service";
 import { FilesService } from "./files/files.service";
 import { NodesService } from "./nodes/nodes.service";
@@ -44,6 +44,10 @@ export class FsService {
 
   copyFile(ownerId: string, fromPath: string, toPath: string): Promise<void> {
     return this.files.copyFile(ownerId, fromPath, toPath);
+  }
+
+  writeFileContent(ownerId: string, path: string, content: Buffer): Promise<{ hash: string; size: number }> {
+    return this.files.writeFileContent(ownerId, path, content);
   }
 
   deleteFile(ownerId: string, path: string): Promise<void> {

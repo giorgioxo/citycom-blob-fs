@@ -1,6 +1,6 @@
 import express from "express";
-import { authRouter } from "./auth/auth.route";
-import { fsRouter } from "./fs/fs.routes";
+import { authRouter } from "./modules/auth/auth.route";
+import { fsRouter } from "./modules/fs/fs.routes";
 
 const app = express();
 
