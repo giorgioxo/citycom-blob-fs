@@ -1,0 +1,6 @@
+{
+  "migrations-dir": "migrations",
+  "database-url": "DATABASE_URL",
+  "direction": "up",
+  "decamelize": true
+}
