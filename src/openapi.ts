@@ -16,7 +16,10 @@ export const openapi: OpenAPIV3.Document = {
     schemas: {
       ErrorResponse: {
         type: "object",
-        properties: { message: { type: "string" }, detail: { type: "string" } },
+        properties: {
+          message: { type: "string" },
+          detail: { type: "string" },
+        },
         required: ["message"],
       },
 
@@ -136,6 +139,18 @@ export const openapi: OpenAPIV3.Document = {
         },
         required: ["path", "readOnly"],
       },
+
+      // NEW: CWD
+      SetCwdRequest: {
+        type: "object",
+        properties: { path: { type: "string", example: "/x/c" } },
+        required: ["path"],
+      },
+      CwdResponse: {
+        type: "object",
+        properties: { cwd: { type: "string", example: "/" } },
+        required: ["cwd"],
+      },
     },
   },
 
@@ -148,7 +163,13 @@ export const openapi: OpenAPIV3.Document = {
           "200": {
             description: "OK",
             content: {
-              "application/json": { schema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] } },
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: { ok: { type: "boolean" } },
+                  required: ["ok"],
+                },
+              },
             },
           },
         },
@@ -161,12 +182,27 @@ export const openapi: OpenAPIV3.Document = {
         summary: "Register user",
         requestBody: {
           required: true,
-          content: { "application/json": { schema: { $ref: "#/components/schemas/RegisterRequest" } } },
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/RegisterRequest" },
+            },
+          },
         },
         responses: {
-          "201": { description: "Created", content: { "application/json": { schema: { $ref: "#/components/schemas/RegisterResponse" } } } },
-          "400": { description: "Bad request", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
-          "409": { description: "User exists", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          "201": {
+            description: "Created",
+            content: {
+              "application/json": { schema: { $ref: "#/components/schemas/RegisterResponse" } },
+            },
+          },
+          "400": {
+            description: "Bad request",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+          "409": {
+            description: "User exists",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
         },
       },
     },
@@ -177,12 +213,23 @@ export const openapi: OpenAPIV3.Document = {
         summary: "Login (returns accessToken, sets refresh cookie)",
         requestBody: {
           required: true,
-          content: { "application/json": { schema: { $ref: "#/components/schemas/LoginRequest" } } },
+          content: {
+            "application/json": { schema: { $ref: "#/components/schemas/LoginRequest" } },
+          },
         },
         responses: {
-          "200": { description: "OK", content: { "application/json": { schema: { $ref: "#/components/schemas/LoginResponse" } } } },
-          "400": { description: "Bad request", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
-          "401": { description: "Invalid credentials", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          "200": {
+            description: "OK",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/LoginResponse" } } },
+          },
+          "400": {
+            description: "Bad request",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+          "401": {
+            description: "Invalid credentials",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
         },
       },
     },
@@ -193,12 +240,23 @@ export const openapi: OpenAPIV3.Document = {
         summary: "Refresh access token (cookie rt or body.refreshToken)",
         requestBody: {
           required: false,
-          content: { "application/json": { schema: { $ref: "#/components/schemas/RefreshRequest" } } },
+          content: {
+            "application/json": { schema: { $ref: "#/components/schemas/RefreshRequest" } },
+          },
         },
         responses: {
-          "200": { description: "OK", content: { "application/json": { schema: { $ref: "#/components/schemas/RefreshResponse" } } } },
-          "400": { description: "Missing refresh token", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
-          "401": { description: "Invalid auth", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          "200": {
+            description: "OK",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/RefreshResponse" } } },
+          },
+          "400": {
+            description: "Missing refresh token",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+          "401": {
+            description: "Invalid auth",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
         },
       },
     },
@@ -209,10 +267,19 @@ export const openapi: OpenAPIV3.Document = {
         summary: "Logout (clears refresh cookie, removes refresh token if provided)",
         requestBody: {
           required: false,
-          content: { "application/json": { schema: { $ref: "#/components/schemas/LogoutRequest" } } },
+          content: {
+            "application/json": { schema: { $ref: "#/components/schemas/LogoutRequest" } },
+          },
         },
         responses: {
-          "200": { description: "OK", content: { "application/json": { schema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] } } } },
+          "200": {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] },
+              },
+            },
+          },
         },
       },
     },
@@ -223,33 +290,83 @@ export const openapi: OpenAPIV3.Document = {
         summary: "Logout all sessions for current user",
         security: [{ bearerAuth: [] }],
         responses: {
-          "200": { description: "OK", content: { "application/json": { schema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] } } } },
-          "401": { description: "Unauthorized", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          "200": {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] },
+              },
+            },
+          },
+          "401": {
+            description: "Unauthorized",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
         },
       },
     },
 
     "/api/fs/directories": {
+      // NEW: list directory children (pagination)
+      get: {
+        tags: ["FS - Directories"],
+        summary: "List directory children (non-recursive) with pagination",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "path", in: "query", required: true, schema: { type: "string" } },
+          { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 200, default: 50 } },
+          { name: "after", in: "query", required: false, schema: { type: "string" } },
+        ],
+        responses: {
+          "200": {
+            description: "OK",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ListNodesResponse" } } },
+          },
+          "400": {
+            description: "Bad request",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+          "401": { description: "Unauthorized" },
+          "404": {
+            description: "Not found",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+        },
+      },
+
       post: {
         tags: ["FS - Directories"],
         summary: "Create directory",
         security: [{ bearerAuth: [] }],
-        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/CreatePathRequest" } } } },
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { $ref: "#/components/schemas/CreatePathRequest" } } },
+        },
         responses: {
           "201": { description: "Created" },
-          "400": { description: "Bad request", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          "400": {
+            description: "Bad request",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
           "401": { description: "Unauthorized" },
           "409": { description: "Already exists" },
         },
       },
+
       delete: {
         tags: ["FS - Directories"],
         summary: "Delete directory (recursive)",
         security: [{ bearerAuth: [] }],
-        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/CreatePathRequest" } } } },
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { $ref: "#/components/schemas/CreatePathRequest" } } },
+        },
         responses: {
           "200": { description: "OK" },
-          "400": { description: "Bad request", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          "400": {
+            description: "Bad request",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
           "401": { description: "Unauthorized" },
           "404": { description: "Not found" },
         },
@@ -261,8 +378,17 @@ export const openapi: OpenAPIV3.Document = {
         tags: ["FS - Directories"],
         summary: "Move directory (recursive)",
         security: [{ bearerAuth: [] }],
-        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/MoveCopyRequest" } } } },
-        responses: { "200": { description: "OK" }, "400": { description: "Bad request" }, "401": { description: "Unauthorized" }, "404": { description: "Not found" }, "409": { description: "Target exists" } },
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { $ref: "#/components/schemas/MoveCopyRequest" } } },
+        },
+        responses: {
+          "200": { description: "OK" },
+          "400": { description: "Bad request" },
+          "401": { description: "Unauthorized" },
+          "404": { description: "Not found" },
+          "409": { description: "Target exists" },
+        },
       },
     },
 
@@ -271,8 +397,17 @@ export const openapi: OpenAPIV3.Document = {
         tags: ["FS - Directories"],
         summary: "Copy directory (recursive)",
         security: [{ bearerAuth: [] }],
-        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/MoveCopyRequest" } } } },
-        responses: { "201": { description: "Created" }, "400": { description: "Bad request" }, "401": { description: "Unauthorized" }, "404": { description: "Not found" }, "409": { description: "Target exists" } },
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { $ref: "#/components/schemas/MoveCopyRequest" } } },
+        },
+        responses: {
+          "201": { description: "Created" },
+          "400": { description: "Bad request" },
+          "401": { description: "Unauthorized" },
+          "404": { description: "Not found" },
+          "409": { description: "Target exists" },
+        },
       },
     },
 
@@ -281,15 +416,32 @@ export const openapi: OpenAPIV3.Document = {
         tags: ["FS - Files"],
         summary: "Create file",
         security: [{ bearerAuth: [] }],
-        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/CreateFileRequest" } } } },
-        responses: { "201": { description: "Created" }, "400": { description: "Bad request" }, "401": { description: "Unauthorized" }, "409": { description: "Already exists" } },
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { $ref: "#/components/schemas/CreateFileRequest" } } },
+        },
+        responses: {
+          "201": { description: "Created" },
+          "400": { description: "Bad request" },
+          "401": { description: "Unauthorized" },
+          "409": { description: "Already exists" },
+        },
       },
+
       delete: {
         tags: ["FS - Files"],
         summary: "Delete file",
         security: [{ bearerAuth: [] }],
-        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/CreatePathRequest" } } } },
-        responses: { "200": { description: "OK" }, "400": { description: "Bad request" }, "401": { description: "Unauthorized" }, "404": { description: "Not found" } },
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { $ref: "#/components/schemas/CreatePathRequest" } } },
+        },
+        responses: {
+          "200": { description: "OK" },
+          "400": { description: "Bad request" },
+          "401": { description: "Unauthorized" },
+          "404": { description: "Not found" },
+        },
       },
     },
 
@@ -298,8 +450,17 @@ export const openapi: OpenAPIV3.Document = {
         tags: ["FS - Files"],
         summary: "Move file",
         security: [{ bearerAuth: [] }],
-        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/MoveCopyRequest" } } } },
-        responses: { "200": { description: "OK" }, "400": { description: "Bad request" }, "401": { description: "Unauthorized" }, "404": { description: "Not found" }, "409": { description: "Target exists" } },
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { $ref: "#/components/schemas/MoveCopyRequest" } } },
+        },
+        responses: {
+          "200": { description: "OK" },
+          "400": { description: "Bad request" },
+          "401": { description: "Unauthorized" },
+          "404": { description: "Not found" },
+          "409": { description: "Target exists" },
+        },
       },
     },
 
@@ -308,8 +469,17 @@ export const openapi: OpenAPIV3.Document = {
         tags: ["FS - Files"],
         summary: "Copy file",
         security: [{ bearerAuth: [] }],
-        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/MoveCopyRequest" } } } },
-        responses: { "201": { description: "Created" }, "400": { description: "Bad request" }, "401": { description: "Unauthorized" }, "404": { description: "Not found" }, "409": { description: "Target exists" } },
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { $ref: "#/components/schemas/MoveCopyRequest" } } },
+        },
+        responses: {
+          "201": { description: "Created" },
+          "400": { description: "Bad request" },
+          "401": { description: "Unauthorized" },
+          "404": { description: "Not found" },
+          "409": { description: "Target exists" },
+        },
       },
     },
 
@@ -323,13 +493,19 @@ export const openapi: OpenAPIV3.Document = {
           "200": {
             description: "Binary content",
             headers: { etag: { schema: { type: "string" } } },
-            content: { "application/octet-stream": { schema: { type: "string", format: "binary" } } },
+            content: {
+              "application/octet-stream": { schema: { type: "string", format: "binary" } },
+            },
           },
-          "400": { description: "Bad request", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          "400": {
+            description: "Bad request",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
           "401": { description: "Unauthorized" },
           "404": { description: "Not found" },
         },
       },
+
       put: {
         tags: ["FS - Files"],
         summary: "Write file content (binary, max 10MB)",
@@ -337,14 +513,25 @@ export const openapi: OpenAPIV3.Document = {
         parameters: [{ name: "path", in: "query", required: true, schema: { type: "string" } }],
         requestBody: {
           required: true,
-          content: { "application/octet-stream": { schema: { type: "string", format: "binary" } } },
+          content: {
+            "application/octet-stream": { schema: { type: "string", format: "binary" } },
+          },
         },
         responses: {
-          "200": { description: "OK", content: { "application/json": { schema: { $ref: "#/components/schemas/WriteContentResponse" } } } },
-          "400": { description: "Bad request", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          "200": {
+            description: "OK",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/WriteContentResponse" } } },
+          },
+          "400": {
+            description: "Bad request",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
           "401": { description: "Unauthorized" },
           "404": { description: "Not found" },
-          "413": { description: "Payload too large", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          "413": {
+            description: "Payload too large",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
         },
       },
     },
@@ -371,7 +558,18 @@ export const openapi: OpenAPIV3.Document = {
         security: [{ bearerAuth: [] }],
         parameters: [{ name: "path", in: "query", required: true, schema: { type: "string" } }],
         responses: {
-          "200": { description: "OK", content: { "application/json": { schema: { type: "object", properties: { node: { $ref: "#/components/schemas/FsNode" } }, required: ["node"] } } } },
+          "200": {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: { node: { $ref: "#/components/schemas/FsNode" } },
+                  required: ["node"],
+                },
+              },
+            },
+          },
           "401": { description: "Unauthorized" },
           "404": { description: "Not found" },
         },
@@ -383,12 +581,51 @@ export const openapi: OpenAPIV3.Document = {
         tags: ["FS - Nodes"],
         summary: "Set read-only flag on node",
         security: [{ bearerAuth: [] }],
-        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/PatchReadOnlyRequest" } } } },
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { $ref: "#/components/schemas/PatchReadOnlyRequest" } } },
+        },
         responses: {
           "200": { description: "OK" },
           "400": { description: "Bad request" },
           "401": { description: "Unauthorized" },
           "404": { description: "Not found" },
+        },
+      },
+    },
+
+    // NEW: CWD ROUTES
+    "/api/fs/cwd": {
+      get: {
+        tags: ["FS - Nodes"],
+        summary: "Get working directory (cwd)",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "OK",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/CwdResponse" } } },
+          },
+          "401": { description: "Unauthorized" },
+        },
+      },
+      put: {
+        tags: ["FS - Nodes"],
+        summary: "Set working directory (cwd)",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { $ref: "#/components/schemas/SetCwdRequest" } } },
+        },
+        responses: {
+          "200": {
+            description: "OK",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/CwdResponse" } } },
+          },
+          "400": {
+            description: "Bad request",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+          "401": { description: "Unauthorized" },
         },
       },
     },
