@@ -14,8 +14,8 @@ export class FsService {
     return this.dirs.createDirectory(ownerId, path);
   }
 
-  listDirectory(ownerId: string, path: string): Promise<FsNode[]> {
-    return this.dirs.listDirectory(ownerId, path);
+  listDirectory(ownerId: string, path: string, limit?: number, afterPath?: string): Promise<FsNode[]> {
+    return this.dirs.listDirectory(ownerId, path, limit, afterPath);
   }
 
   moveDirectory(ownerId: string, fromPath: string, toPath: string): Promise<void> {

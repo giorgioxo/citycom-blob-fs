@@ -98,6 +98,32 @@ export class PostgresMetadataStore implements MetadataStore {
     return r.rows.map(rowToNode);
   }
 
+  async listChildren(ownerId: string, dirPath: string, limit: number, afterPath?: string, tx?: DbClient): Promise<FsNode[]> {
+    const db = tx ?? pool;
+
+    const base = dirPath;
+    const prefix = base === "/" ? "/" : base + "/";
+
+    const likeAll = `${prefix}%`;
+    const likeDeeper = `${prefix}%/%`;
+
+    const r = await db.query(
+      `
+      select * from fs_nodes
+      where owner_id = $1
+        and path like $2
+        and path not like $3
+        and path <> $4
+        and ($5::text is null or path > $5)
+      order by path asc
+      limit $6
+      `,
+      [ownerId, likeAll, likeDeeper, base, afterPath ?? null, limit]
+    );
+
+    return r.rows.map(rowToNode);
+  }
+
   async deleteNode(ownerId: string, path: string, tx?: DbClient): Promise<void> {
     const db = tx ?? pool;
 

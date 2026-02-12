@@ -21,6 +21,7 @@ export interface MetadataStore {
   exists(ownerId: string, path: string, tx?: DbClient): Promise<boolean>;
   getNode(ownerId: string, path: string, tx?: DbClient): Promise<FsNode | undefined>;
   listByPrefix(ownerId: string, prefix: string, tx?: DbClient): Promise<FsNode[]>;
+  listChildren(ownerId: string, dirPath: string, limit: number, afterPath?: string, tx?: DbClient): Promise<FsNode[]>;
   deleteNode(ownerId: string, path: string, tx?: DbClient): Promise<void>;
   moveNode(ownerId: string, fromPath: string, toPath: string, tx?: DbClient): Promise<void>;
 }

@@ -18,31 +18,16 @@ export class DirectoriesService {
     });
   }
 
-  async listDirectory(ownerId: string, path: string): Promise<FsNode[]> {
+  async listDirectory(ownerId: string, path: string, limit = 50, afterPath?: string): Promise<FsNode[]> {
     const base = normalizePath(path);
 
     const baseNode = await this.metadata.getNode(ownerId, base);
     if (!baseNode) throw new Error("path not found");
     if (baseNode.kind !== "dir") throw new Error("path is not a directory");
 
-    const prefix = base === "/" ? "/" : base + "/";
+    const safeLimit = Math.max(1, Math.min(limit, 200));
 
-    const nodes = await this.metadata.listByPrefix(ownerId, prefix);
-
-    const out: FsNode[] = [];
-    for (const n of nodes) {
-      if (n.path === base) continue;
-      if (!n.path.startsWith(prefix)) continue;
-
-      const suffix = n.path.slice(prefix.length);
-      if (!suffix) continue;
-      if (suffix.includes("/")) continue;
-
-      out.push(n);
-    }
-
-    out.sort((a, b) => a.path.localeCompare(b.path));
-    return out;
+    return this.metadata.listChildren(ownerId, base, safeLimit, afterPath);
   }
 
   async listNodesRecursive(ownerId: string, path: string): Promise<FsNode[]> {

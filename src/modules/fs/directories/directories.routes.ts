@@ -12,8 +12,14 @@ export function directoriesRouter(fsService: FsService): Router {
     const path = String(q ?? "");
     if (!path) return res.status(400).json({ message: "path required" });
 
+    const limitQ = req.query.limit;
+    const afterQ = req.query.after;
+
+    const limit = typeof limitQ === "string" && limitQ.trim() ? Number(limitQ) : 50;
+    const after = typeof afterQ === "string" && afterQ.trim() ? afterQ.trim() : undefined;
+
     try {
-      const nodes = await fsService.listDirectory(req.userId, path);
+      const nodes = await fsService.listDirectory(req.userId, path, limit, after);
       return res.status(200).json({ nodes });
     } catch (e) {
       const message = e instanceof Error ? e.message : "unknown error";

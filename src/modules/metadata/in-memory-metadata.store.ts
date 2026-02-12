@@ -59,6 +59,29 @@ export class InMemoryMetadataStore implements MetadataStore {
     return out;
   }
 
+  async listChildren(ownerId: string, dirPath: string, limit: number, afterPath?: string): Promise<FsNode[]> {
+    const base = dirPath;
+    const prefix = base === "/" ? "/" : base + "/";
+
+    const out: FsNode[] = [];
+    for (const node of this.nodes.values()) {
+      if (node.ownerId !== ownerId) continue;
+      if (node.path === base) continue;
+      if (!node.path.startsWith(prefix)) continue;
+
+      const suffix = node.path.slice(prefix.length);
+      if (!suffix) continue;
+      if (suffix.includes("/")) continue;
+
+      if (afterPath && node.path <= afterPath) continue;
+
+      out.push(node);
+    }
+
+    out.sort((a, b) => a.path.localeCompare(b.path));
+    return out.slice(0, limit);
+  }
+
   async deleteNode(ownerId: string, path: string): Promise<void> {
     const key = this.key(ownerId, path);
     const exists = this.nodes.has(key);
