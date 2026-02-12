@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../../auth/auth.middleware";
 import { FsService } from "../fs.service";
+import { toPublicFsNode } from "../shared/fs-node.dto";
 
 export function nodesRouter(fsService: FsService): Router {
   const router = Router();
@@ -54,7 +55,7 @@ export function nodesRouter(fsService: FsService): Router {
 
     try {
       const node = await fsService.getInfo(req.userId, path);
-      return res.status(200).json({ node });
+      return res.status(200).json({ node: toPublicFsNode(node) });
     } catch (e) {
       const message = e instanceof Error ? e.message : "unknown error";
 
