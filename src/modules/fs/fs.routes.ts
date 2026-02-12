@@ -12,6 +12,8 @@ import { nodesRouter } from "./nodes/nodes.routes";
 import { PostgresMetadataStore } from "../metadata/postgres-metadata.store";
 import { PostgresBlobStore } from "../blob/postgres-blob.store";
 
+import { cwdRouter } from "./cwd/cwd.routes";
+
 const fsRouter = Router();
 
 const metadata = new PostgresMetadataStore();
@@ -26,5 +28,6 @@ const fsService = new FsService(files, dirs, nodes);
 fsRouter.use("/directories", directoriesRouter(fsService));
 fsRouter.use("/files", filesRouter(fsService));
 fsRouter.use("/", nodesRouter(fsService));
+fsRouter.use("/cwd", cwdRouter);
 
 export { fsRouter };

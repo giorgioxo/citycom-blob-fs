@@ -49,3 +49,20 @@ export async function removeRefreshToken(userId: string, refreshToken: string): 
 export async function removeAllRefreshTokens(userId: string): Promise<void> {
   await pool.query(`DELETE FROM refresh_tokens WHERE user_id=$1`, [userId]);
 }
+export async function getWorkingDirectory(userId: string): Promise<string> {
+  const r = await pool.query(`select working_directory from users where id = $1`, [userId]);
+
+  if (r.rows.length === 0) {
+    throw new Error("user not found");
+  }
+
+  return r.rows[0].working_directory;
+}
+
+export async function setWorkingDirectory(userId: string, path: string): Promise<void> {
+  const r = await pool.query(`update users set working_directory = $2 where id = $1`, [userId, path]);
+
+  if ((r.rowCount ?? 0) === 0) {
+    throw new Error("user not found");
+  }
+}

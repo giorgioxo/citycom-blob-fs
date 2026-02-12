@@ -1,6 +1,7 @@
 import type { MetadataStore } from "../../metadata/metadata.store";
 import type { BlobStore } from "../../blob/blob.store";
-import { normalizePath, parentOf } from "../shared/path.utils";
+import { parentOf } from "../shared/path.utils";
+import { resolvePath } from "../shared/resolve-path";
 import { withTx } from "../../../db/pg";
 import { hashBuffer } from "../../blob/blob-hash";
 
@@ -9,7 +10,7 @@ export class FilesService {
 
   async createFile(ownerId: string, path: string, size?: number): Promise<void> {
     return withTx(async (tx) => {
-      const normalizedPath = normalizePath(path);
+      const normalizedPath = await resolvePath(ownerId, path);
       const parentPath = parentOf(normalizedPath);
 
       const exists = await this.metadata.exists(ownerId, normalizedPath, tx);
@@ -39,8 +40,8 @@ export class FilesService {
 
   async moveFile(ownerId: string, fromPath: string, toPath: string): Promise<void> {
     return withTx(async (tx) => {
-      const from = normalizePath(fromPath);
-      const to = normalizePath(toPath);
+      const from = await resolvePath(ownerId, fromPath);
+      const to = await resolvePath(ownerId, toPath);
 
       if (from === "/" || to === "/") throw new Error("cannot move root");
 
@@ -73,8 +74,8 @@ export class FilesService {
   }
 
   async copyFile(ownerId: string, fromPath: string, toPath: string): Promise<void> {
-    const from = normalizePath(fromPath);
-    const to = normalizePath(toPath);
+    const from = await resolvePath(ownerId, fromPath);
+    const to = await resolvePath(ownerId, toPath);
 
     if (from === "/" || to === "/") throw new Error("cannot copy root");
 
@@ -126,7 +127,7 @@ export class FilesService {
 
   async writeFileContent(ownerId: string, path: string, content: Buffer): Promise<{ hash: string; size: number }> {
     return withTx(async (tx) => {
-      const filePath = normalizePath(path);
+      const filePath = await resolvePath(ownerId, path);
       if (filePath === "/") throw new Error("cannot write to root");
 
       const node = await this.metadata.getNode(ownerId, filePath, tx);
@@ -165,7 +166,7 @@ export class FilesService {
   }
 
   async readFileContent(ownerId: string, path: string): Promise<{ hash: string; content: Buffer }> {
-    const filePath = normalizePath(path);
+    const filePath = await resolvePath(ownerId, path);
     if (filePath === "/") throw new Error("cannot read root");
 
     const node = await this.metadata.getNode(ownerId, filePath);
@@ -183,7 +184,7 @@ export class FilesService {
 
   async deleteFile(ownerId: string, path: string): Promise<void> {
     return withTx(async (tx) => {
-      const normalizedPath = normalizePath(path);
+      const normalizedPath = await resolvePath(ownerId, path);
       if (normalizedPath === "/") throw new Error("cannot delete root");
 
       const node = await this.metadata.getNode(ownerId, normalizedPath, tx);

@@ -1,6 +1,7 @@
 import type { FsNode, MetadataStore } from "../../metadata/metadata.store";
 import type { BlobStore } from "../../blob/blob.store";
-import { normalizePath, parentOf } from "../shared/path.utils";
+import { parentOf } from "../shared/path.utils";
+import { resolvePath } from "../shared/resolve-path";
 import { withTx } from "../../../db/pg";
 
 export class DirectoriesService {
@@ -8,7 +9,7 @@ export class DirectoriesService {
 
   async setReadOnly(ownerId: string, path: string, readOnly: boolean): Promise<void> {
     return withTx(async (tx) => {
-      const normalizedPath = normalizePath(path);
+      const normalizedPath = await resolvePath(ownerId, path);
       if (normalizedPath === "/") throw new Error("cannot change root permissions");
 
       const node = await this.metadata.getNode(ownerId, normalizedPath, tx);
@@ -19,7 +20,7 @@ export class DirectoriesService {
   }
 
   async listDirectory(ownerId: string, path: string, limit = 50, afterPath?: string): Promise<FsNode[]> {
-    const base = normalizePath(path);
+    const base = await resolvePath(ownerId, path);
 
     const baseNode = await this.metadata.getNode(ownerId, base);
     if (!baseNode) throw new Error("path not found");
@@ -31,7 +32,7 @@ export class DirectoriesService {
   }
 
   async listNodesRecursive(ownerId: string, path: string): Promise<FsNode[]> {
-    const base = normalizePath(path);
+    const base = await resolvePath(ownerId, path);
 
     const baseNode = await this.metadata.getNode(ownerId, base);
     if (!baseNode) throw new Error("path not found");
@@ -45,7 +46,7 @@ export class DirectoriesService {
   }
 
   async createDirectory(ownerId: string, path: string): Promise<void> {
-    const normalizedPath = normalizePath(path);
+    const normalizedPath = await resolvePath(ownerId, path);
     if (normalizedPath === "/") throw new Error("path already exists");
 
     return withTx(async (tx) => {
@@ -105,8 +106,8 @@ export class DirectoriesService {
   }
 
   async moveDirectory(ownerId: string, fromPath: string, toPath: string): Promise<void> {
-    const from = normalizePath(fromPath);
-    const to = normalizePath(toPath);
+    const from = await resolvePath(ownerId, fromPath);
+    const to = await resolvePath(ownerId, toPath);
 
     if (from === "/" || to === "/") throw new Error("cannot move root");
     if (to === from || to.startsWith(from + "/")) throw new Error("cannot move directory into itself");
@@ -153,8 +154,8 @@ export class DirectoriesService {
   }
 
   async copyDirectory(ownerId: string, fromPath: string, toPath: string): Promise<void> {
-    const from = normalizePath(fromPath);
-    const to = normalizePath(toPath);
+    const from = await resolvePath(ownerId, fromPath);
+    const to = await resolvePath(ownerId, toPath);
 
     if (from === "/" || to === "/") throw new Error("cannot copy root");
     if (to === from || to.startsWith(from + "/")) throw new Error("cannot copy directory into itself");
@@ -225,8 +226,7 @@ export class DirectoriesService {
   }
 
   async deleteDirectory(ownerId: string, path: string): Promise<void> {
-    const base = normalizePath(path);
-
+    const base = await resolvePath(ownerId, path);
     if (base === "/") throw new Error("cannot delete root");
 
     return withTx(async (tx) => {
