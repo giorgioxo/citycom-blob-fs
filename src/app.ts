@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import cookieParser from "cookie-parser";
 import swaggerUi from "swagger-ui-express";
@@ -12,15 +13,12 @@ export function createApp() {
   app.use(express.json());
   app.use(cookieParser());
 
-  // swagger
   app.get("/docs.json", (_req, res) => res.json(openapi));
   app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapi, { explorer: true }));
 
-  // routes
   app.use("/auth", authRouter);
   app.use("/api/fs", fsRouter);
 
-  // health
   app.get("/health", (_req, res) => {
     res.json({ ok: true });
   });

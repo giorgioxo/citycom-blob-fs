@@ -140,7 +140,6 @@ export const openapi: OpenAPIV3.Document = {
         required: ["path", "readOnly"],
       },
 
-      // NEW: CWD
       SetCwdRequest: {
         type: "object",
         properties: { path: { type: "string", example: "/x/c" } },
@@ -307,7 +306,6 @@ export const openapi: OpenAPIV3.Document = {
     },
 
     "/api/fs/directories": {
-      // NEW: list directory children (pagination)
       get: {
         tags: ["FS - Directories"],
         summary: "List directory children (non-recursive) with pagination",
@@ -594,7 +592,6 @@ export const openapi: OpenAPIV3.Document = {
       },
     },
 
-    // NEW: CWD ROUTES
     "/api/fs/cwd": {
       get: {
         tags: ["FS - Nodes"],
