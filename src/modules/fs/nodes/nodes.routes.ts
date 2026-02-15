@@ -9,9 +9,7 @@ export function nodesRouter(fsService: FsService): Router {
   router.get("/", requireAuth, async (req, res) => {
     const path = String(req.query.path ?? "");
 
-    if (!path) {
-      return res.status(400).json({ message: "path required" });
-    }
+    if (!path) return res.status(400).json({ message: "path required" });
 
     try {
       const nodes = await fsService.listNodesRecursive(req.userId, path);
