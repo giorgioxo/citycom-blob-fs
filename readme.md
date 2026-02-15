@@ -58,18 +58,40 @@ npm install
 
 ### 2. Start PostgreSQL (Docker)
 
-```bash
-docker run --name blobfs-postgres \
-  -e POSTGRES_USER=blobfs \
-  -e POSTGRES_PASSWORD=blobfs \
-  -e POSTGRES_DB=blobfs \
-  -p 5432:5432 \
-  -d postgres:16
+Windows: open **PowerShell / Windows Terminal (Run as Administrator)**
+
+Install Docker Desktop (if not installed):
+
+```powershell
+winget install -e --id Docker.DockerDesktop
 ```
+
+Open Docker Desktop once and wait until it finishes starting.
+
+Verify Docker:
+
+```powershell
+docker --version
+docker ps
+```
+
+Run PostgreSQL container:
+
+```powershell
+docker run --name blobfs-postgres -e POSTGRES_USER=blobfs -e POSTGRES_PASSWORD=blobfs -e POSTGRES_DB=blobfs -p 5432:5432 -d postgres:16
+```
+
+Check container:
+
+````powershell
+docker ps
+```bash
+docker run --name blobfs-postgres -e POSTGRES_USER=blobfs -e POSTGRES_PASSWORD=blobfs -e POSTGRES_DB=blobfs -p 5432:5432 -d postgres:16
+````
 
 ### 3. Environment (.env)
 
-.env is already included in the repository (removed from .gitignore), so manual creation is not required.
+`.env` is already included in the repository (removed from .gitignore), so manual creation is not required. (for easy run its included passwords)
 
 Values can still be edited if needed.
 
